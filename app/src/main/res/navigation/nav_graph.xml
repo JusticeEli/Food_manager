@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/nav_graph"
+    app:startDestination="@id/addStudentFragment">
+
+    <fragment
+        android:id="@+id/addStudentFragment"
+        android:name="com.justice.foodmanager.AddStudentFragment"
+        android:label="AddStudentFragment" >
+        <argument
+            android:name="date"
+            app:argType="string" />
+    </fragment>
+    <fragment
+        android:id="@+id/editStudentFragment"
+        android:name="com.justice.foodmanager.EditStudentFragment"
+        android:label="EditStudentFragment" >
+        <argument
+            android:name="studentData"
+            app:argType="com.justice.foodmanager.StudentData" />
+        <action
+            android:id="@+id/action_editStudentFragment_to_addStudentFragment"
+            app:destination="@id/addStudentFragment" />
+        <argument
+            android:name="date"
+            app:argType="string" />
+    </fragment>
+    <fragment
+        android:id="@+id/splashScreenFragment"
+        android:name="com.justice.foodmanager.SplashScreenFragment"
+        android:label="SplashScreenFragment" >
+        <action
+            android:id="@+id/action_splashScreenFragment_to_studentsFragment"
+            app:destination="@id/studentsFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/studentsFragment"
+        android:name="com.justice.foodmanager.StudentsFragment"
+        android:label="StudentsFragment" >
+        <action
+            android:id="@+id/action_studentsFragment_to_editStudentFragment"
+            app:destination="@id/editStudentFragment" />
+    </fragment>
+</navigation>
