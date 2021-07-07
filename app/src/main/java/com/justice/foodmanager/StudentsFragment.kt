@@ -10,6 +10,7 @@ import android.util.Log
 import android.view.*
 import android.widget.*
 import androidx.appcompat.widget.SearchView
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -46,18 +47,19 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
         const val STUDENT_ARGS = "studentData"
     }
 
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding = FragmentStudentsBinding.bind(view)
         navController = findNavController()
-        initProgressBar()
+
         setHasOptionsMenu(true)
         initRecyclerViewAdapter()
         setOnClickListeners()
         setSwipeListenerForItems()
         subScribeToObservers()
         setValuesForSpinners()
-
+        initFetching()
     }
 
     //checking when to call spinner onItemSelected
@@ -83,7 +85,7 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
                     if (++check > 1) {
                         val classGrade = binding.classGradeSpinner.selectedItem.toString()
                         Log.d(TAG, "onItemSelected: spinner value changed: ${classGrade}")
-                        viewModel.setEvent(StudentsViewModel.Event.ClassSelected(classGrade))
+                        classGradeSelected(classGrade)
 
                     }
 
@@ -91,37 +93,13 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
                 }
 
                 override fun onNothingSelected(parent: AdapterView<*>?) {
-                    TODO("Not yet implemented")
+                    Log.d(TAG, "onNothingSelected: ")
                 }
             }
     }
 
 
     private fun subScribeToObservers() {
-        viewLifecycleOwner.lifecycleScope.launchWhenResumed {
-            viewModel.getStudents.collect {
-                when (it.status) {
-                    Resource.Status.LOADING -> {
-                        showProgress(true)
-                    }
-                    Resource.Status.SUCCESS -> {
-                        showProgress(false)
-                        viewModel.setCurrentListLiveData(it.data?.documents)
-                        adapter.submitList(it.data?.documents)
-                    }
-                    Resource.Status.ERROR -> {
-                        showProgress(false)
-                    }
-                    Resource.Status.EMPTY -> {
-                        showProgress(false)
-
-                    }
-                }
-            }
-
-        }
-
-
         viewLifecycleOwner.lifecycleScope.launchWhenResumed {
             viewModel.studentsEvents.collect {
                 when (it) {
@@ -130,12 +108,10 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
                         Log.d(TAG, "subScribeToObservers: student:$student")
                         navController.navigate(
                             StudentsFragmentDirections.actionStudentsFragmentToEditStudentFragment(
-                                student!!
+                                student!!,
+                                binding.currentDateTxtView.text.toString().cleanString
                             )
                         )
-                    }
-                    is StudentsViewModel.Event.StudentEdit -> {
-                        val student = it.parentSnapshot.toObject(StudentData::class.java)
                     }
                     is StudentsViewModel.Event.StudentDelete -> {
                         deleteStudentFromDatabase(it.parentSnapshot)
@@ -145,9 +121,13 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
                         deleteStudentFromDatabase(it.parentSnapshot)
                     }
 
-                    StudentsViewModel.Event.AddStudent -> {
-                        findNavController().navigate(R.id.action_editStudentFragment_to_addStudentFragment)
+                    is StudentsViewModel.Event.CorrectDateChoosen -> {
+                        correctDateChoosen(it.currentInfo)
                     }
+                    is StudentsViewModel.Event.FutureDateChoosen -> {
+                        futureDateChoosen()
+                    }
+
                 }
             }
 
@@ -157,10 +137,17 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
 
             viewModel.deleteStudentStatus.collect {
                 when (it.status) {
+                    Resource.Status.LOADING->{
+                        showProgess(true)
+
+                    }
                     Resource.Status.SUCCESS -> {
                         showToastInfo("Success deleting student")
+                        showProgess(false)
                     }
                     Resource.Status.ERROR -> {
+                        showProgess(false)
+
                         showToastInfo("Error: ${it.exception?.message}")
                     }
                 }
@@ -170,21 +157,22 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
 
         viewLifecycleOwner.lifecycleScope.launchWhenResumed {
             viewModel.studentQueryStatus.collect {
+                Log.d(TAG, "subScribeToObservers: studentQueryStatus:${it.status.name}")
                 when (it.status) {
                     Resource.Status.LOADING -> {
-                        showProgress(true)
+                        showProgess(true)
 
                     }
                     Resource.Status.SUCCESS -> {
-                        showProgress(false)
+                        showProgess(false)
                         adapter.submitList(it.data)
                     }
                     Resource.Status.ERROR -> {
-                        showProgress(false)
+                        showProgess(false)
                         Log.d(TAG, "subScribeToObservers: Error: ${it.exception?.message}")
                     }
                     Resource.Status.EMPTY -> {
-                        showProgress(false)
+                        showProgess(false)
                         Log.d(TAG, "subScribeToObservers: empty query has been passed")
                         adapter.submitList(viewModel.currentListLiveData.value)
 
@@ -192,59 +180,14 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
                 }
             }
         }
-
-        viewLifecycleOwner.lifecycleScope.launchWhenResumed {
-            viewModel.getCurrentDate.collect {
-                when (it.status) {
-                    Resource.Status.LOADING -> {
-                    }
-                    Resource.Status.SUCCESS -> {
-                        receivedCurrentDate(it.data!!)
-                    }
-                }
-            }
-        }
-
-        viewLifecycleOwner.lifecycleScope.launchWhenResumed {
-            viewModel.studentsEvents.collect {
-                when (it) {
-                    is StudentsViewModel.Event.DateClicked -> {
-                        dateClicked()
-                    }
-                    is StudentsViewModel.Event.CorrectDateChoosen -> {
-                        correctDateChoosen(it.currentInfo)
-                    }
-                    is StudentsViewModel.Event.FutureDateChoosen -> {
-                        futureDateChoosen()
-                    }
-                    is StudentsViewModel.Event.ClassSelected -> {
-                        classGradeSelected(it.classGrade)
-                    }
-                }
-            }
-        }
-
-        viewLifecycleOwner.lifecycleScope.launchWhenResumed {
-            viewModel.fetchDataStatus.collect {
-                Log.d(TAG, "subScribeToObservers:fetchDataStatus ${it.status.name}")
-                when (it.status) {
-                    Resource.Status.LOADING -> {
-
-                    }
-                    Resource.Status.SUCCESS -> {
-                        adapter.submitList(it.data)
-
-                    }
-                    Resource.Status.ERROR -> {
-
-                    }
-                }
-            }
-        }
     }
 
+    private fun showProgess(visible: Boolean) {
+        binding.progressBar.isVisible = visible
+    }
 
     private fun dateClicked() {
+        Log.d(TAG, "dateClicked: ")
         val date = DatePickerDialog.OnDateSetListener { view, year, monthOfYear, dayOfMonth ->
 
             val calenderChoosen = Calendar.getInstance()
@@ -271,7 +214,8 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
         ).show()
     }
 
-    private fun receivedCurrentDate(date: Date) {
+    private fun initFetching() {
+        val date = Calendar.getInstance().time
         val dateFormatted = date.formatDate
         Log.d(TAG, "receivedCurrentDate: currentdate:$dateFormatted")
         binding.currentDateTxtView.text = dateFormatted
@@ -316,7 +260,9 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
 
         searchView.onQueryTextChanged { query ->
             Log.d(TAG, "onCreateOptionsMenu: query:$query")
-            viewModel.setEvent(StudentsViewModel.Event.StudentQuery(query))
+
+            val classGrade = binding.classGradeSpinner.selectedItem.toString()
+            viewModel.setEvent(StudentsViewModel.Event.StudentQuery(query, classGrade))
         }
 
 
@@ -341,12 +287,23 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
     }
 
     private fun onStudentDelete(it: DocumentSnapshot) {
-        viewModel.setEvent(StudentsViewModel.Event.StudentDelete(it))
+        deleteStudentFromDatabase(it)
     }
 
     private fun onStudentClicked(it: DocumentSnapshot) {
         Log.d(TAG, "onStudentClicked: ")
-        viewModel.setEvent(StudentsViewModel.Event.StudentClicked(it))
+        val student = it.toObject(StudentData::class.java)!!
+        goToEditScreen(student)
+    }
+
+    private fun goToEditScreen(student: StudentData) {
+        val date = binding.currentDateTxtView.text.toString().cleanString
+        findNavController().navigate(
+            StudentsFragmentDirections.actionStudentsFragmentToEditStudentFragment(
+                student,
+                date
+            )
+        )
     }
 
     private fun onEditClicked(it: DocumentSnapshot) {
@@ -356,10 +313,15 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
 
     private fun setOnClickListeners() {
         binding.addStudentBtn.setOnClickListener {
-            viewModel.setEvent(StudentsViewModel.Event.AddStudent)
+            val date = binding.currentDateTxtView.text.toString().cleanString
+            findNavController().navigate(
+                StudentsFragmentDirections.actionStudentsFragmentToAddStudentFragment(
+                    date
+                )
+            )
         }
         binding.dateBtn.setOnClickListener {
-            viewModel.setEvent(StudentsViewModel.Event.DateClicked)
+            dateClicked()
         }
     }
 
@@ -387,82 +349,12 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val snapshot = adapter.currentList.get(viewHolder.adapterPosition)
-                viewModel.setEvent(StudentsViewModel.Event.StudentSwiped(snapshot))
+                deleteStudentFromDatabase(snapshot)
             }
         }).attachToRecyclerView(binding.recyclerView)
     }
 
 
-    /////////////////////PROGRESS_BAR////////////////////////////
-    lateinit var dialog: AlertDialog
 
-    fun showProgress(show: Boolean) {
-
-        if (show) {
-            dialog.show()
-
-        } else {
-            dialog.dismiss()
-
-        }
-
-    }
-
-    private fun initProgressBar() {
-
-        dialog = setProgressDialog(requireContext(), "Loading..")
-        dialog.setCancelable(false)
-        dialog.setCanceledOnTouchOutside(false)
-    }
-
-    fun setProgressDialog(context: Context, message: String): AlertDialog {
-        val llPadding = 30
-        val ll = LinearLayout(context)
-        ll.orientation = LinearLayout.HORIZONTAL
-        ll.setPadding(llPadding, llPadding, llPadding, llPadding)
-        ll.gravity = Gravity.CENTER
-        var llParam = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        llParam.gravity = Gravity.CENTER
-        ll.layoutParams = llParam
-
-        val progressBar = ProgressBar(context)
-        progressBar.isIndeterminate = true
-        progressBar.setPadding(0, 0, llPadding, 0)
-        progressBar.layoutParams = llParam
-
-        llParam = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        llParam.gravity = Gravity.CENTER
-        val tvText = TextView(context)
-        tvText.text = message
-        tvText.setTextColor(Color.parseColor("#000000"))
-        tvText.textSize = 20.toFloat()
-        tvText.layoutParams = llParam
-
-        ll.addView(progressBar)
-        ll.addView(tvText)
-
-        val builder = AlertDialog.Builder(context)
-        builder.setCancelable(true)
-        builder.setView(ll)
-
-        val dialog = builder.create()
-        val window = dialog.window
-        if (window != null) {
-            val layoutParams = WindowManager.LayoutParams()
-            layoutParams.copyFrom(dialog.window?.attributes)
-            layoutParams.width = LinearLayout.LayoutParams.WRAP_CONTENT
-            layoutParams.height = LinearLayout.LayoutParams.WRAP_CONTENT
-            dialog.window?.attributes = layoutParams
-        }
-        return dialog
-    }
-
-    //end progressbar
 
 }

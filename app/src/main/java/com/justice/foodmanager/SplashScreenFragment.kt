@@ -47,6 +47,7 @@ class SplashScreenFragment : Fragment(R.layout.fragment_splash_screen) {
                     }
                     Resource.Status.SUCCESS -> {
                         showProgress(false)
+                        goToHomeScreen()
                     }
                     Resource.Status.ERROR -> {
                         showProgress(false)

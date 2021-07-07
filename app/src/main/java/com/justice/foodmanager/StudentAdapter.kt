@@ -1,5 +1,6 @@
 package com.justice.foodmanager
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -9,7 +10,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.justice.foodmanager.databinding.ItemRegisterBinding
 
 class StudentAdapter(
-    private val checkBoxClicked:(DocumentSnapshot,Boolean)->Unit,
+    private val checkBoxClicked: (DocumentSnapshot, Boolean) -> Unit,
     private val onEditClicked: (DocumentSnapshot) -> Unit,
     private val onStudentClicked: (DocumentSnapshot) -> Unit,
     private val onStudentDelete: (DocumentSnapshot) -> Unit
@@ -48,26 +49,42 @@ class StudentAdapter(
 
     override fun onBindViewHolder(holder: StudentAdapter.ViewHolder, position: Int) {
         val model = getItem(position).toObject(StudentData::class.java)!!
-        holder.binding.studentNameTxtView.text = "${model.firstName} ${model.lastName} "
-        holder.binding.studentClassTxtView.text = "${model.gradeClass}"
-        setOnClickListeners(holder, position)
+        Log.d(TAG, "onBindViewHolder: model:$model")
+        holder.bind(model)
     }
 
-    private fun setOnClickListeners(holder: ViewHolder, position: Int) {
 
-        var currentSnapshot: DocumentSnapshot
-        try {
-            currentSnapshot = getItem(position)
-        } catch (e: IndexOutOfBoundsException) {
-            currentSnapshot = getItem(position - 1)
+    inner class ViewHolder(val binding: ItemRegisterBinding) :
+        RecyclerView.ViewHolder(binding.root) {
+
+        fun bind(model: StudentData) = with(binding.root) {
+            binding.studentNameTxtView.text = "${model.firstName} ${model.lastName} "
+            binding.studentClassTxtView.text = "${model.gradeClass}"
+
+            binding.checkbox.setOnCheckedChangeListener(null);
+            binding.checkbox.isChecked = model.present
+            setOnClickListeners(this@ViewHolder, this@ViewHolder.adapterPosition)
 
         }
 
-        holder.itemView.setOnClickListener {
-            onStudentClicked(currentSnapshot)
+        private fun setOnClickListeners(holder: ViewHolder, position: Int) {
+
+            var currentSnapshot: DocumentSnapshot
+            try {
+                currentSnapshot = getItem(position)
+            } catch (e: IndexOutOfBoundsException) {
+                currentSnapshot = getItem(position - 1)
+
+            }
+
+            holder.itemView.setOnClickListener {
+                onStudentClicked(currentSnapshot)
+            }
+            holder.binding.checkbox.setOnCheckedChangeListener { buttonView, isChecked ->
+                Log.d(TAG, "setOnClickListeners: isChecked:$isChecked")
+                checkBoxClicked(currentSnapshot, isChecked)
+            }
         }
     }
-
-    inner class ViewHolder(val binding: ItemRegisterBinding) : RecyclerView.ViewHolder(binding.root)
 
 }

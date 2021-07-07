@@ -9,6 +9,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.DocumentSnapshot
+import com.justice.foodmanager.utils.FirebaseUtil.getCurrentDate
 import com.justice.foodmanager.utils.Resource
 import com.justice.foodmanager.utils.exhaustive
 import kotlinx.coroutines.channels.Channel
@@ -23,10 +24,8 @@ class StudentsViewModel @ViewModelInject constructor(
     @Assisted private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val TAG = "StudentsViewModel"
-    val getStudents = repository.getStudents()
-
-    val getCurrentDate = repository.getCurrentDate()
-    private val _registerEvents = Channel<Event>()
+    private val _getCurrentDateStatus = Channel<Resource<Date>>()
+    val getCurrentDateStatus = _getCurrentDateStatus.receiveAsFlow()
 
     private val _studentsEvents = Channel<Event>()
     val studentsEvents = _studentsEvents.receiveAsFlow()
@@ -35,50 +34,24 @@ class StudentsViewModel @ViewModelInject constructor(
     fun setEvent(event: Event) {
         viewModelScope.launch {
             when (event) {
-                is Event.StudentClicked -> {
-                    _studentsEvents.send(Event.StudentClicked(event.parentSnapshot))
-                }
-                is Event.StudentEdit -> {
-                    _studentsEvents.send(Event.StudentEdit(event.parentSnapshot))
 
-                }
-                is Event.StudentDelete -> {
-                    _studentsEvents.send(Event.StudentDelete(event.parentSnapshot))
-
-                }
                 is Event.StudentDeleteConfirmed -> {
                     deleteStudent(event.parentSnapshot)
                 }
-                is Event.StudentSwiped -> {
-                    _studentsEvents.send(Event.StudentSwiped(event.parentSnapshot))
-
+                is Event.GetCurrentDate -> {
+                    getCurrentDate()
                 }
                 is Event.StudentQuery -> {
-                    startQuery(event.query)
-                }
-                Event.AddStudent -> {
-                    _studentsEvents.send(Event.AddStudent)
-
-                }
-                is Event.DateClicked -> {
-                    _registerEvents.send(Event.DateClicked)
-
+                    startQuery(event.query, event.classGrade)
                 }
                 is Event.CorrectDateChoosen -> {
                     checkIfWeHaveChoosenCorrectDate(event.currentInfo)
                 }
-                is Event.ClassSelected -> {
-                    _registerEvents.send(Event.ClassSelected(event.classGrade))
-                }
-                is Event.TabSelected -> {
-                    _registerEvents.send(Event.TabSelected(event.tab))
-                }
-                is Event.FetchData -> {
 
+                is Event.FetchData -> {
                     startFetchingData(event.currentInfo)
                 }
                 is Event.CheckBoxClicked -> {
-
                     onCheckBoxClicked(event.snapshot, event.present)
                 }
             }
@@ -103,19 +76,30 @@ class StudentsViewModel @ViewModelInject constructor(
 
     private val _currentListLiveData = MutableLiveData<List<DocumentSnapshot>>()
     val currentListLiveData get() = _currentListLiveData
-    fun setCurrentListLiveData(documents: List<DocumentSnapshot>?) {
-        currentListLiveData.value = documents
-    }
+
 
     private val _studentQueryStatus = Channel<Resource<List<DocumentSnapshot>>>()
     val studentQueryStatus = _studentQueryStatus.receiveAsFlow()
 
-    private suspend fun startQuery(query: String) {
-        if (query.isBlank()) {
-            _studentQueryStatus.send(Resource.empty())
-        } else {
+    private suspend fun startQuery(query: String, classGrade: String) {
+        Log.d(TAG, "startQuery: query:$query ::classGrade:$classGrade")
+        _studentQueryStatus.send(Resource.loading("querying..."))
+        if (classGrade.equals("all")) {
+
             val filteredList = mutableListOf<DocumentSnapshot>()
             currentListLiveData.value?.forEach {
+                val student = it.toObject(StudentData::class.java)!!
+                if (student.firstName.toLowerCase()
+                        .contains(query.toLowerCase()) || student.lastName.toLowerCase()
+                        .contains(query.toLowerCase())
+                ) {
+                    filteredList.add(it)
+                }
+            }
+            _studentQueryStatus.send(Resource.success(filteredList))
+        } else {
+            val filteredList = mutableListOf<DocumentSnapshot>()
+            getQueryGradeClassList(classGrade).forEach {
                 val student = it.toObject(StudentData::class.java)!!
                 if (student.firstName.toLowerCase()
                         .contains(query.toLowerCase()) || student.lastName.toLowerCase()
@@ -130,8 +114,40 @@ class StudentsViewModel @ViewModelInject constructor(
         }
     }
 
-    private suspend fun onCheckBoxClicked(snapshot: DocumentSnapshot, present: Boolean) {
+    private suspend fun startQueryGradeClass(classGrade: String) {
+        Log.d(TAG, "startQueryGradeClass: classGrade:$classGrade")
+        if (classGrade.equals("all")) {
+            _studentQueryStatus.send(Resource.success(currentListLiveData.value!!))
+        } else {
+            val filteredList = mutableListOf<DocumentSnapshot>()
+            currentListLiveData.value?.forEach {
+                val student = it.toObject(StudentData::class.java)!!
+                if (student.gradeClass.equals(classGrade)) {
+                    filteredList.add(it)
+                }
+            }
+            Log.d(TAG, "startQueryGradeClass: filteredList size:${filteredList.size}")
+            _studentQueryStatus.send(Resource.success(filteredList))
 
+        }
+    }
+
+    private suspend fun getQueryGradeClassList(classGrade: String): List<DocumentSnapshot> {
+        Log.d(TAG, "startQueryGradeClass: classGrade:$classGrade")
+        val filteredList = mutableListOf<DocumentSnapshot>()
+        currentListLiveData.value?.forEach {
+            val student = it.toObject(StudentData::class.java)!!
+            if (student.gradeClass.equals(classGrade)) {
+                filteredList.add(it)
+            }
+        }
+        Log.d(TAG, "startQueryGradeClass: filteredList size:${filteredList.size}")
+
+        return filteredList
+
+    }
+
+    private suspend fun onCheckBoxClicked(snapshot: DocumentSnapshot, present: Boolean) {
         repository.onCheckBoxClicked(snapshot, present).collect {
             Log.d(TAG, "onCheckBoxClicked: ${it.status.name}")
             when (it.status) {
@@ -149,8 +165,8 @@ class StudentsViewModel @ViewModelInject constructor(
     }
 
     private suspend fun startFetchingData(currentInfo: CurrentInfo) {
-
-
+        Log.d(TAG, "startFetchingData: currentInfo:$currentInfo")
+        _studentQueryStatus.send(Resource.loading("Fetching data..."))
         repository.startFetchingData(currentInfo).collect {
             Log.d(TAG, "startFetchingData: ${it.status.name}")
             when (it.status) {
@@ -173,14 +189,37 @@ class StudentsViewModel @ViewModelInject constructor(
 
     }
 
+    private suspend fun documentExists(currentInfo: CurrentInfo, snapshot: DocumentSnapshot) {
+        Log.d(TAG, "documentExists: ")
+        repository.documentExist(currentInfo).collect {
+            Log.d(TAG, "documentExists: status:${it.status.name}")
+            when (it.status) {
+                Resource.Status.LOADING -> {
+
+                }
+                Resource.Status.SUCCESS -> {
+                    // successfully fetched list of students
+                    successFilterResult(it, currentInfo)
+
+                }
+                Resource.Status.ERROR -> {
+                    _fetchDataStatus.send(it)
+                }
+            }
+
+        }
+    }
+
     private suspend fun documentDoesNotExist(currentInfo: CurrentInfo) {
+        Log.d(TAG, "documentDoesNotExist: ")
         repository.documentDoesNotExist(currentInfo).collect {
             when (it.status) {
                 Resource.Status.LOADING -> {
 
                 }
                 Resource.Status.SUCCESS -> {
-                    _fetchDataStatus.send(it)
+                    // successfully fetched list of students
+                    successFilterResult(it, currentInfo)
 
                 }
                 Resource.Status.ERROR -> {
@@ -190,27 +229,15 @@ class StudentsViewModel @ViewModelInject constructor(
         }
     }
 
-    private suspend fun documentExists(currentInfo: CurrentInfo, snapshot: DocumentSnapshot) {
-        repository.documentExist(currentInfo, snapshot).collect {
-            when (it.status) {
-                Resource.Status.LOADING -> {
 
-                }
-                Resource.Status.SUCCESS -> {
-                    //
-                    successFilterResult(it)
-
-                }
-                Resource.Status.ERROR -> {
-                    _fetchDataStatus.send(it)
-                }
-            }
-
-        }
-    }
-
-    private suspend fun successFilterResult(it: Resource<List<DocumentSnapshot>>) {
-        _fetchDataStatus.send(it)
+    private suspend fun successFilterResult(
+        it: Resource<List<DocumentSnapshot>>,
+        currentInfo: CurrentInfo
+    ) {
+        Log.d(TAG, "successFilterResult: size:${it.data!!.size}")
+        currentListLiveData.value = it.data
+        startQueryGradeClass(currentInfo.currentClassGrade)
+        Log.d(TAG, "successFilterResult: end")
     }
 
     private suspend fun checkIfWeHaveChoosenCorrectDate(currentInfo: CurrentInfo) {
@@ -247,7 +274,7 @@ class StudentsViewModel @ViewModelInject constructor(
         data class StudentDelete(val parentSnapshot: DocumentSnapshot) : Event()
         data class StudentDeleteConfirmed(val parentSnapshot: DocumentSnapshot) : Event()
         data class StudentSwiped(val parentSnapshot: DocumentSnapshot) : Event()
-        data class StudentQuery(val query: String) : Event()
+        data class StudentQuery(val query: String, val classGrade: String) : Event()
         object AddStudent : Event()
 
         ////////
@@ -259,6 +286,7 @@ class StudentsViewModel @ViewModelInject constructor(
         data class CheckBoxClicked(val snapshot: DocumentSnapshot, val present: Boolean) : Event()
         object DateClicked : Event()
         object FutureDateChoosen : Event()
+        object GetCurrentDate : Event()
 
     }
 

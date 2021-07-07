@@ -1,20 +1,22 @@
 package com.justice.foodmanager
 
+import android.app.AlertDialog
+import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
-import android.view.View
-import android.widget.ArrayAdapter
-import android.widget.Toast
+import android.view.*
+import android.widget.*
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
-import com.justice.foodmanager.databinding.FragmentAddStudentBinding
 import com.justice.foodmanager.databinding.FragmentEditStudentBinding
 import com.justice.foodmanager.utils.Resource
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
+import java.util.*
 
 @AndroidEntryPoint
 class EditStudentFragment : Fragment(R.layout.fragment_edit_student) {
@@ -30,7 +32,7 @@ class EditStudentFragment : Fragment(R.layout.fragment_edit_student) {
         binding = FragmentEditStudentBinding.bind(view)
         Log.d(TAG, "onViewCreated: student:${navArgs.studentData}")
         Log.d(TAG, "onViewCreated: date:${navArgs.date}")
-
+        initProgressBar()
         setValuesForSpinner()
         subScribeToObservers()
 
@@ -52,15 +54,16 @@ class EditStudentFragment : Fragment(R.layout.fragment_edit_student) {
                 Log.d(TAG, "subScribeToObservers: currentStudent:${it.status.name}")
                 when (it.status) {
                     Resource.Status.LOADING -> {
-
+                        showProgress(true)
                     }
                     Resource.Status.SUCCESS -> {
                         viewModel.setCurrentSnapshot(it.data!!)
-                        setDefaultValuesToEdtTxt(it.data.toObject(StudentData::class.java)!!)
+                        setDefaultValuesToEdtTxt(it.data!!.toObject(StudentData::class.java)!!)
                         setOnClickListeners()
-
+                        showProgress(false)
                     }
                     Resource.Status.ERROR -> {
+                        showProgress(false)
                         showToastInfo("Error:${it.exception?.message}")
                     }
                 }
@@ -77,6 +80,7 @@ class EditStudentFragment : Fragment(R.layout.fragment_edit_student) {
                     }
                     Resource.Status.SUCCESS -> {
                         showProgress(false)
+                        goBack()
                     }
                     Resource.Status.ERROR -> {
                         showProgress(false)
@@ -93,15 +97,16 @@ class EditStudentFragment : Fragment(R.layout.fragment_edit_student) {
         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
     }
 
-    private fun showProgress(b: Boolean) {
-
-
-    }
 
     private fun setOnClickListeners() {
         binding.submitBtn.setOnClickListener {
             val student = getStudentObject()
-            viewModel.setEvent(EditStudentViewModel.Event.StudentEditSubmitClicked(student))
+            viewModel.setEvent(
+                EditStudentViewModel.Event.StudentEditSubmitClicked(
+                    student,
+                    navArgs.date
+                )
+            )
         }
     }
 
@@ -110,8 +115,11 @@ class EditStudentFragment : Fragment(R.layout.fragment_edit_student) {
             val firstName = firstNameEdtTxt.text.toString()
             val lastName = lastNameEdtTxt.text.toString()
             val classGrade = (classGradeSpinner.getSelectedItem().toString())
-            val student = StudentData(firstName, lastName, classGrade)
-
+            val student = navArgs.studentData.copy(
+                firstName = firstName,
+                lastName = lastName,
+                gradeClass = classGrade
+            )
             return student
         }
 
@@ -124,17 +132,19 @@ class EditStudentFragment : Fragment(R.layout.fragment_edit_student) {
         }
     }
 
-    private fun setDefaultValuesToEdtTxt(studentData: StudentData) {
+    private fun setDefaultValuesToEdtTxt(studentData: StudentData?) {
+        Log.d(TAG, "setDefaultValuesToEdtTxt: studentData:$studentData")
         binding.apply {
             firstNameEdtTxt.setText(studentData!!.firstName)
             lastNameEdtTxt.setText(studentData!!.lastName)
             setDefaultValueClassGradeSpinner(studentData)
         }
-
+        Log.d(TAG, "setDefaultValuesToEdtTxt: end")
 
     }
 
     private fun setDefaultValueClassGradeSpinner(studentData: StudentData) {
+        Log.d(TAG, "setDefaultValueClassGradeSpinner: ")
         binding.apply {
             when (studentData!!.gradeClass) {
                 "1 " -> classGradeSpinner.setSelection(0)
@@ -153,4 +163,76 @@ class EditStudentFragment : Fragment(R.layout.fragment_edit_student) {
     private fun goBack() {
         findNavController().popBackStack()
     }
+
+    /////////////////////PROGRESS_BAR////////////////////////////
+    lateinit var dialog: AlertDialog
+
+    private fun showProgress(show: Boolean) {
+
+        if (show) {
+            dialog.show()
+
+        } else {
+            dialog.dismiss()
+
+        }
+
+    }
+
+    private fun initProgressBar() {
+
+        dialog = setProgressDialog(requireContext(), "Loading..")
+        dialog.setCancelable(false)
+        dialog.setCanceledOnTouchOutside(false)
+    }
+
+    fun setProgressDialog(context: Context, message: String): AlertDialog {
+        val llPadding = 30
+        val ll = LinearLayout(context)
+        ll.orientation = LinearLayout.HORIZONTAL
+        ll.setPadding(llPadding, llPadding, llPadding, llPadding)
+        ll.gravity = Gravity.CENTER
+        var llParam = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+        llParam.gravity = Gravity.CENTER
+        ll.layoutParams = llParam
+
+        val progressBar = ProgressBar(context)
+        progressBar.isIndeterminate = true
+        progressBar.setPadding(0, 0, llPadding, 0)
+        progressBar.layoutParams = llParam
+
+        llParam = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        llParam.gravity = Gravity.CENTER
+        val tvText = TextView(context)
+        tvText.text = message
+        tvText.setTextColor(Color.parseColor("#000000"))
+        tvText.textSize = 20.toFloat()
+        tvText.layoutParams = llParam
+
+        ll.addView(progressBar)
+        ll.addView(tvText)
+
+        val builder = AlertDialog.Builder(context)
+        builder.setCancelable(true)
+        builder.setView(ll)
+
+        val dialog = builder.create()
+        val window = dialog.window
+        if (window != null) {
+            val layoutParams = WindowManager.LayoutParams()
+            layoutParams.copyFrom(dialog.window?.attributes)
+            layoutParams.width = LinearLayout.LayoutParams.WRAP_CONTENT
+            layoutParams.height = LinearLayout.LayoutParams.WRAP_CONTENT
+            dialog.window?.attributes = layoutParams
+        }
+        return dialog
+    }
+
+    //end progressbar
 }

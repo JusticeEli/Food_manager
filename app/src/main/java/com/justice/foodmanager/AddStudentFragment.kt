@@ -1,9 +1,18 @@
 package com.justice.foodmanager
 
+import android.app.AlertDialog
+import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.ArrayAdapter
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -25,6 +34,7 @@ class AddStudentFragment : Fragment(R.layout.fragment_add_student) {
         super.onViewCreated(view, savedInstanceState)
         binding = FragmentAddStudentBinding.bind(view)
         Log.d(TAG, "onViewCreated: date:${navArgs.date}")
+        initProgressBar()
         setOnClickListeners()
         setValuesForSpinner()
         subScribeToObservers()
@@ -54,14 +64,13 @@ class AddStudentFragment : Fragment(R.layout.fragment_add_student) {
         }
     }
 
-    private fun showProgress(visible: Boolean) {
 
-    }
 
     private fun setOnClickListeners() {
         binding.submitBtn.setOnClickListener {
 
             val student = getStudentObject()
+            Log.d(TAG, "setOnClickListeners: student:$student")
             viewModel.setEvent(AddStudentViewModel.Event.StudentAddSubmitClicked(student,navArgs.date))
 
         }
@@ -72,7 +81,7 @@ class AddStudentFragment : Fragment(R.layout.fragment_add_student) {
             val firstName = firstNameEdtTxt.text.toString()
             val lastName = lastNameEdtTxt.text.toString()
             val classGrade = (classGradeSpinner.getSelectedItem().toString())
-            val student = StudentData(firstName, lastName, classGrade)
+            val student = StudentData("",firstName, lastName, classGrade)
 
             return student
         }
@@ -97,4 +106,71 @@ class AddStudentFragment : Fragment(R.layout.fragment_add_student) {
 
 
     }
+      /////////////////////PROGRESS_BAR////////////////////////////
+          lateinit var dialog: AlertDialog
+
+          private fun showProgress(show: Boolean) {
+
+              if (show) {
+                  dialog.show()
+
+              } else {
+                  dialog.dismiss()
+
+              }
+
+          }
+          private fun initProgressBar() {
+
+              dialog = setProgressDialog(requireContext(), "Loading..")
+              dialog.setCancelable(false)
+              dialog.setCanceledOnTouchOutside(false)
+          }
+
+          fun setProgressDialog(context: Context, message: String): AlertDialog {
+              val llPadding = 30
+              val ll = LinearLayout(context)
+              ll.orientation = LinearLayout.HORIZONTAL
+              ll.setPadding(llPadding, llPadding, llPadding, llPadding)
+              ll.gravity = Gravity.CENTER
+              var llParam = LinearLayout.LayoutParams(
+                      LinearLayout.LayoutParams.WRAP_CONTENT,
+                      LinearLayout.LayoutParams.WRAP_CONTENT)
+              llParam.gravity = Gravity.CENTER
+              ll.layoutParams = llParam
+
+              val progressBar = ProgressBar(context)
+              progressBar.isIndeterminate = true
+              progressBar.setPadding(0, 0, llPadding, 0)
+              progressBar.layoutParams = llParam
+
+              llParam = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                      ViewGroup.LayoutParams.WRAP_CONTENT)
+              llParam.gravity = Gravity.CENTER
+              val tvText = TextView(context)
+              tvText.text = message
+              tvText.setTextColor(Color.parseColor("#000000"))
+              tvText.textSize = 20.toFloat()
+              tvText.layoutParams = llParam
+
+              ll.addView(progressBar)
+              ll.addView(tvText)
+
+              val builder = AlertDialog.Builder(context)
+              builder.setCancelable(true)
+              builder.setView(ll)
+
+              val dialog = builder.create()
+              val window = dialog.window
+              if (window != null) {
+                  val layoutParams = WindowManager.LayoutParams()
+                  layoutParams.copyFrom(dialog.window?.attributes)
+                  layoutParams.width = LinearLayout.LayoutParams.WRAP_CONTENT
+                  layoutParams.height = LinearLayout.LayoutParams.WRAP_CONTENT
+                  dialog.window?.attributes = layoutParams
+              }
+              return dialog
+          }
+
+          //end progressbar
 }

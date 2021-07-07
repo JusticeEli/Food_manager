@@ -1,9 +1,11 @@
 package com.justice.foodmanager
 
+import android.util.Log
 import androidx.hilt.lifecycle.ViewModelInject
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.navArgs
+import com.google.firebase.firestore.DocumentReference
 import com.justice.foodmanager.utils.FirebaseUtil
 import com.justice.foodmanager.utils.Resource
 import kotlinx.coroutines.channels.Channel
@@ -28,7 +30,6 @@ class AddStudentViewModel @ViewModelInject constructor(private val repository: S
                     if (fieldsAreEmpty(event.student)) {
                         _addStudentStatus.send(Resource.empty())
                     } else {
-                        _addStudentStatus.send(Resource.loading("started the uploading parent"))
                         trimDataAndSaveIntoDatabase(event.student, event.date)
                     }
 
@@ -44,17 +45,23 @@ class AddStudentViewModel @ViewModelInject constructor(private val repository: S
     }
 
     private suspend fun uploadStudent(student: StudentData, date: String) {
+        Log.d(TAG, "uploadStudent: student:$student : :date:$date")
         _addStudentStatus.send(Resource.loading("adding student"))
+        val documentReference: DocumentReference =
+            try {
+                FirebaseUtil.addStudentToMainCollection(student)
+            } catch (e: Exception) {
+                _addStudentStatus.send(Resource.error(e))
+                throw Exception("shit")
+            }
+        val studentDate = student.copy(id = documentReference.id)
         try {
-            FirebaseUtil.addStudentToMainCollection(student)
+            FirebaseUtil.addStudentToDateCollection(studentDate, date)
+            _addStudentStatus.send(Resource.success(student))
         } catch (e: Exception) {
             _addStudentStatus.send(Resource.error(e))
         }
-        try {
-            FirebaseUtil.addStudentToDateCollection(student, date)
-        } catch (e: Exception) {
-            _addStudentStatus.send(Resource.error(e))
-        }
+
     }
 
     private fun fieldsAreEmpty(student: StudentData) =

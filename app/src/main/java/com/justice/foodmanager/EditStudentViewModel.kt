@@ -40,23 +40,23 @@ class EditStudentViewModel @ViewModelInject constructor(
                     if (fieldsAreEmpty(event.student)) {
                         _editStudentStatus.send(Resource.empty())
                     } else {
-                        _editStudentStatus.send(Resource.loading("started the uploading parent"))
-                        trimDataAndSaveIntoDatabase(event.student,event.date)
+                        trimDataAndSaveIntoDatabase(event.student, event.date)
                     }
                 }
             }
         }
 
     }
+
     private suspend fun trimDataAndSaveIntoDatabase(data: StudentData, date: String) {
         val student = data.copy(firstName = data.firstName.trim(), lastName = data.lastName.trim())
         updateStudent(student, date)
     }
 
     private suspend fun updateStudent(student: StudentData, date: String) {
-        _editStudentStatus.send(Resource.loading("adding student"))
+        _editStudentStatus.send(Resource.loading("editing student"))
         try {
-            FirebaseUtil.updateStudentToMainCollection(student)
+            FirebaseUtil.updateStudentToMainCollection(student.copy(present = false))
         } catch (e: Exception) {
             _editStudentStatus.send(Resource.error(e))
         }
@@ -65,6 +65,8 @@ class EditStudentViewModel @ViewModelInject constructor(
         } catch (e: Exception) {
             _editStudentStatus.send(Resource.error(e))
         }
+
+        _editStudentStatus.send(Resource.success(student))
     }
 
     private fun fieldsAreEmpty(student: StudentData) =

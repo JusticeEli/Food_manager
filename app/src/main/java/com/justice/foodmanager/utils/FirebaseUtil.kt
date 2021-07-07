@@ -15,8 +15,8 @@ object FirebaseUtil {
     val firebaseAuth = FirebaseAuth.getInstance()
 
     //   private val ROOT="root"
-    private val COLLECTION_STUDENTS = "students"
-    private val COLLECTION_DATES = "dates"
+    private val COLLECTION_STUDENTS = "students3"
+    private val COLLECTION_DATES = "dates4"
 
 
     val isUserLoggedIn: Boolean
@@ -33,7 +33,9 @@ object FirebaseUtil {
 
     }
 
-    fun getCurrentDate(onComplete: (Date?) -> Unit) {
+    fun getCurrentDate() = Calendar.getInstance().time
+
+    fun getCurrentDate6(onComplete: (Date?) -> Unit) {
 
         FirebaseFirestore.getInstance().collection("dummy").document("date").set(CurrentDate())
             .addOnSuccessListener {
@@ -71,7 +73,8 @@ object FirebaseUtil {
     suspend fun addStudentToDateCollection(studentData: StudentData, date: String) =
         collectionReferenceDates.document(date).collection(
             COLLECTION_STUDENTS
-        ).add(studentData).await()
+        ).document(studentData.id).set(studentData).await()
+
     suspend fun updateStudentToMainCollection(studentData: StudentData) =
         collectionReferenceMainStudents.document(studentData.id).set(studentData).await()
 
