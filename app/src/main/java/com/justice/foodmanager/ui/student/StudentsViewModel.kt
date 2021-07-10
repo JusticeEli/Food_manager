@@ -1,4 +1,4 @@
-package com.justice.foodmanager
+package com.justice.foodmanager.ui.student
 
 
 import android.util.Log
@@ -9,9 +9,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.DocumentSnapshot
+import com.justice.foodmanager.data.CurrentInfo
+import com.justice.foodmanager.data.StudentData
+import com.justice.foodmanager.data.StudentsRepository
 import com.justice.foodmanager.utils.FirebaseUtil.getCurrentDate
 import com.justice.foodmanager.utils.Resource
-import com.justice.foodmanager.utils.exhaustive
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -30,7 +32,7 @@ class StudentsViewModel @ViewModelInject constructor(
     private val _studentsEvents = Channel<Event>()
     val studentsEvents = _studentsEvents.receiveAsFlow()
 
-
+    private val currentInfo=CurrentInfo()
     fun setEvent(event: Event) {
         viewModelScope.launch {
             when (event) {
@@ -243,6 +245,7 @@ class StudentsViewModel @ViewModelInject constructor(
     private suspend fun checkIfWeHaveChoosenCorrectDate(currentInfo: CurrentInfo) {
         //check if we have choosen a future date and reject it if its future date
 ///checks if we are on same day
+        Log.d(TAG, "checkIfWeHaveChoosenCorrectDate: currentInfo:$currentInfo")
         val choosenDate = currentInfo.dateChoosen!!
         val currentDateServer = repository.getCurrentDate2()
         val cal1 = Calendar.getInstance()
@@ -252,8 +255,10 @@ class StudentsViewModel @ViewModelInject constructor(
 
         val sameDay = cal1[Calendar.DAY_OF_YEAR] == cal2[Calendar.DAY_OF_YEAR] &&
                 cal1[Calendar.YEAR] == cal2[Calendar.YEAR]
+        if (sameDay) {
+            _studentsEvents.send(Event.CorrectDateChoosen(currentInfo))
 
-        if (choosenDate.after(currentDateServer)) {
+        } else if (choosenDate.after(currentDateServer)) {
             _studentsEvents.send(Event.FutureDateChoosen)
 
         } else {

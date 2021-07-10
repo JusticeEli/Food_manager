@@ -6,7 +6,7 @@
 
     <fragment
         android:id="@+id/addStudentFragment"
-        android:name="com.justice.foodmanager.AddStudentFragment"
+        android:name="com.justice.foodmanager.ui.add_student.AddStudentFragment"
         android:label="AddStudentFragment">
         <argument
             android:name="date"
@@ -14,18 +14,18 @@
     </fragment>
     <fragment
         android:id="@+id/editStudentFragment"
-        android:name="com.justice.foodmanager.EditStudentFragment"
+        android:name="com.justice.foodmanager.ui.edit_student.EditStudentFragment"
         android:label="EditStudentFragment">
         <argument
             android:name="studentData"
-            app:argType="com.justice.foodmanager.StudentData" />
+            app:argType="com.justice.foodmanager.data.StudentData" />
         <argument
             android:name="date"
             app:argType="string" />
     </fragment>
     <fragment
         android:id="@+id/splashScreenFragment"
-        android:name="com.justice.foodmanager.SplashScreenFragment"
+        android:name="com.justice.foodmanager.ui.splash.SplashScreenFragment"
         android:label="SplashScreenFragment">
         <action
             android:id="@+id/action_splashScreenFragment_to_studentsFragment"
@@ -35,7 +35,7 @@
     </fragment>
     <fragment
         android:id="@+id/studentsFragment"
-        android:name="com.justice.foodmanager.StudentsFragment"
+        android:name="com.justice.foodmanager.ui.student.StudentsFragment"
         android:label="StudentsFragment">
         <action
             android:id="@+id/action_studentsFragment_to_editStudentFragment"

@@ -1,4 +1,4 @@
-package com.justice.foodmanager
+package com.justice.foodmanager.ui.edit_student
 
 import android.app.AlertDialog
 import android.content.Context
@@ -12,6 +12,9 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+
+import com.justice.foodmanager.R
+import com.justice.foodmanager.data.StudentData
 import com.justice.foodmanager.databinding.FragmentEditStudentBinding
 import com.justice.foodmanager.utils.Resource
 import dagger.hilt.android.AndroidEntryPoint

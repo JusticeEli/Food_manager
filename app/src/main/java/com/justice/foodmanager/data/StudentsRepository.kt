@@ -1,4 +1,4 @@
-package com.justice.foodmanager
+package com.justice.foodmanager.data
 
 import android.util.Log
 import com.google.firebase.auth.FirebaseUser
@@ -6,6 +6,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.SetOptions
+
 import com.justice.foodmanager.utils.FirebaseUtil
 import com.justice.foodmanager.utils.Resource
 import kotlinx.coroutines.channels.awaitClose
@@ -126,6 +127,7 @@ class StudentsRepository {
                 Log.d(TAG, "onCheckBoxClicked:success ")
                 offer(Resource.success(snapshot))
             }.addOnFailureListener {
+                Log.d(TAG, "onCheckBoxClicked2: failure:${it.message}")
                 offer(Resource.error(it))
             }
             awaitClose { }

@@ -1,7 +1,8 @@
-package com.justice.foodmanager
+package com.justice.foodmanager.ui
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import com.justice.foodmanager.R
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

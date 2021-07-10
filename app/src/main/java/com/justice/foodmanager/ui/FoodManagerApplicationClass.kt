@@ -1,4 +1,4 @@
-package com.justice.foodmanager
+package com.justice.foodmanager.ui
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp

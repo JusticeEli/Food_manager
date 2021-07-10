@@ -5,7 +5,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.ServerTimestamp
-import com.justice.foodmanager.StudentData
+import com.justice.foodmanager.data.StudentData
 import kotlinx.coroutines.tasks.await
 import java.util.*
 

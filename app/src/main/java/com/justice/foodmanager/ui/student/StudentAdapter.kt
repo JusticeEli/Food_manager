@@ -1,4 +1,4 @@
-package com.justice.foodmanager
+package com.justice.foodmanager.ui.student
 
 import android.util.Log
 import android.view.LayoutInflater
@@ -7,6 +7,8 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.firestore.DocumentSnapshot
+import com.justice.foodmanager.R
+import com.justice.foodmanager.data.StudentData
 import com.justice.foodmanager.databinding.ItemRegisterBinding
 
 class StudentAdapter(
@@ -15,7 +17,9 @@ class StudentAdapter(
     private val onStudentClicked: (DocumentSnapshot) -> Unit,
     private val onStudentDelete: (DocumentSnapshot) -> Unit
 ) : ListAdapter<DocumentSnapshot, StudentAdapter.ViewHolder>(DIFF_UTIL) {
-    private val TAG = "ParentFilterAdapter"
+
+            private  val TAG="StudentAdapter"
+
 
     companion object {
         val DIFF_UTIL = object : DiffUtil.ItemCallback<DocumentSnapshot>() {
@@ -23,7 +27,7 @@ class StudentAdapter(
                 oldItem: DocumentSnapshot,
                 newItem: DocumentSnapshot
             ): Boolean {
-                return oldItem.id == newItem.id
+                 return oldItem.reference.path == newItem.reference.path
             }
 
             override fun areContentsTheSame(
@@ -47,9 +51,11 @@ class StudentAdapter(
     }
 
 
-    override fun onBindViewHolder(holder: StudentAdapter.ViewHolder, position: Int) {
-        val model = getItem(position).toObject(StudentData::class.java)!!
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val snapshot=getItem(position)
+        val model = snapshot.toObject(StudentData::class.java)!!
         Log.d(TAG, "onBindViewHolder: model:$model")
+        Log.d(TAG, "onBindViewHolder: path:${snapshot.reference.path}")
         holder.bind(model)
     }
 

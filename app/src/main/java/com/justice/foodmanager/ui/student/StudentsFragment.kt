@@ -1,14 +1,17 @@
-package com.justice.foodmanager
+package com.justice.foodmanager.ui.student
 
 
-import android.app.AlertDialog
 import android.app.DatePickerDialog
-import android.content.Context
-import android.graphics.Color
+import com.justice.foodmanager.ui.student.StudentAdapter
 import android.os.Bundle
 import android.util.Log
-import android.view.*
-import android.widget.*
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
+import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Toast
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -19,8 +22,13 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.firebase.ui.auth.AuthUI
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.firestore.DocumentSnapshot
+import com.justice.foodmanager.data.CurrentInfo
+import com.justice.foodmanager.R
+
+import com.justice.foodmanager.data.StudentData
 import com.justice.foodmanager.databinding.FragmentStudentsBinding
 import com.justice.foodmanager.utils.Resource
 import com.justice.foodmanager.utils.cleanString
@@ -137,7 +145,7 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
 
             viewModel.deleteStudentStatus.collect {
                 when (it.status) {
-                    Resource.Status.LOADING->{
+                    Resource.Status.LOADING -> {
                         showProgess(true)
 
                     }
@@ -199,6 +207,7 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
             val currentInfo = CurrentInfo(
                 calenderChoosen.time.formatDate.cleanString,
                 currentClassGrade,
+                "",
                 calenderChoosen.time
             )
 
@@ -232,7 +241,7 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
 
     private fun classGradeSelected(classGrade: String) {
         val currentDateString = binding.currentDateTxtView.text.toString().cleanString
-        val currentInfo = CurrentInfo(currentDateString, classGrade, null)
+        val currentInfo = CurrentInfo(currentDateString, classGrade, "", null)
         viewModel.setEvent(StudentsViewModel.Event.FetchData(currentInfo))
 
     }
@@ -257,7 +266,6 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
         val searchItem = menu.findItem(R.id.searchItem)
         searchView = searchItem.actionView as SearchView
 
-
         searchView.onQueryTextChanged { query ->
             Log.d(TAG, "onCreateOptionsMenu: query:$query")
 
@@ -268,6 +276,21 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
 
 
         super.onCreateOptionsMenu(menu, inflater)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+
+        if (item.itemId == R.id.logoutItem) {
+            logout()
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    private fun logout() {
+        AuthUI.getInstance().signOut(requireContext()).addOnSuccessListener {
+            Log.d(TAG, "logout: ")
+            requireActivity().finish()
+        }
     }
 
 
@@ -354,7 +377,10 @@ class StudentsFragment : Fragment(R.layout.fragment_students) {
         }).attachToRecyclerView(binding.recyclerView)
     }
 
-
+    override fun onDestroyView() {
+        super.onDestroyView()
+        searchView.setOnQueryTextListener(null)
+    }
 
 
 }

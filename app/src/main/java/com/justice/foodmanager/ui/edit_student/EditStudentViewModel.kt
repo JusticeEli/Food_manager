@@ -1,9 +1,12 @@
-package com.justice.foodmanager
+package com.justice.foodmanager.ui.edit_student
 
 import androidx.hilt.Assisted
 import androidx.hilt.lifecycle.ViewModelInject
 import androidx.lifecycle.*
 import com.google.firebase.firestore.DocumentSnapshot
+import com.justice.foodmanager.data.StudentData
+import com.justice.foodmanager.data.StudentsRepository
+import com.justice.foodmanager.ui.student.StudentsFragment
 import com.justice.foodmanager.utils.FirebaseUtil
 import com.justice.foodmanager.utils.Resource
 import kotlinx.coroutines.channels.Channel

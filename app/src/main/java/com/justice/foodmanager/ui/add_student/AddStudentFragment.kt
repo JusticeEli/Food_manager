@@ -1,4 +1,4 @@
-package com.justice.foodmanager
+package com.justice.foodmanager.ui.add_student
 
 import android.app.AlertDialog
 import android.content.Context
@@ -17,6 +17,8 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
+import com.justice.foodmanager.R
+import com.justice.foodmanager.data.StudentData
 import com.justice.foodmanager.databinding.FragmentAddStudentBinding
 import com.justice.foodmanager.utils.Resource
 import dagger.hilt.android.AndroidEntryPoint
@@ -71,7 +73,12 @@ class AddStudentFragment : Fragment(R.layout.fragment_add_student) {
 
             val student = getStudentObject()
             Log.d(TAG, "setOnClickListeners: student:$student")
-            viewModel.setEvent(AddStudentViewModel.Event.StudentAddSubmitClicked(student,navArgs.date))
+            viewModel.setEvent(
+                AddStudentViewModel.Event.StudentAddSubmitClicked(
+                    student,
+                    navArgs.date
+                )
+            )
 
         }
     }

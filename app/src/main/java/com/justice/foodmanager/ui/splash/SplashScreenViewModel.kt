@@ -1,10 +1,11 @@
-package com.justice.foodmanager
+package com.justice.foodmanager.ui.splash
 
 import androidx.hilt.lifecycle.ViewModelInject
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.DocumentSnapshot
+import com.justice.foodmanager.data.StudentsRepository
 import com.justice.foodmanager.utils.Resource
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -25,7 +26,7 @@ class SplashScreenViewModel @ViewModelInject constructor(private val repository:
     val splashScreenEvents = _splashScreenEvents.receiveAsFlow()
 
 
-    fun setEvent(event:Event) {
+    fun setEvent(event: Event) {
         viewModelScope.launch {
             when (event) {
 

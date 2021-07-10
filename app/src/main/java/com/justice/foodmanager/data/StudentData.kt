@@ -1,4 +1,4 @@
-package com.justice.foodmanager
+package com.justice.foodmanager.data
 
 import android.os.Parcelable
 import com.google.firebase.firestore.DocumentId

@@ -1,4 +1,4 @@
-package com.justice.foodmanager
+package com.justice.foodmanager.ui.splash
 
 import android.app.Activity
 import android.content.Intent
@@ -14,6 +14,7 @@ import androidx.navigation.fragment.findNavController
 import com.firebase.ui.auth.AuthUI
 import com.firebase.ui.auth.ErrorCodes
 import com.firebase.ui.auth.IdpResponse
+import com.justice.foodmanager.R
 import com.justice.foodmanager.databinding.FragmentSplashScreenBinding
 import com.justice.foodmanager.utils.Resource
 import dagger.hilt.android.AndroidEntryPoint
